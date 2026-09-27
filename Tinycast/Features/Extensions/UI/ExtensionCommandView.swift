@@ -36,8 +36,11 @@ struct ExtensionCommandView: View {
             case .detail:
                 ExtensionDetailBody(
                     markdown: screen.root?.string("markdown"),
+                    html: screen.root?.string("html"),
+                    css: screen.root?.string("css"),
                     metadata: screen.root?.node("metadata"),
-                    isLoading: screen.isLoading, assetsPath: assetsPath)
+                    isLoading: screen.isLoading,
+                    assetsPath: assetsPath)
             case .form:
                 ExtensionFormView(
                     screen: screen, assetsPath: assetsPath, selection: selection, scroll: scroll,

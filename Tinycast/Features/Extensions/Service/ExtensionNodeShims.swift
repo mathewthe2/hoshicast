@@ -153,6 +153,10 @@ final class ExtensionNodeShims: @unchecked Sendable {
 
         case "close", "read", "write":
             return try fileOperation(method: method, arguments: arguments)
+            
+        case "fstat":
+            print("[Tinycast fs] fstat args:", arguments)
+            return try fstat(arguments: arguments)
 
         case "readFile":
             let target = try path(0)
@@ -194,8 +198,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
         case "stat":
             let target = try path(0)
             let followLinks = !(arguments[safe: 1] as? Bool ?? false)
-            return try stat(path: target, followLinks: followLinks)
-
+            return try statFile(path: target, followLinks: followLinks)
         case "readdir":
             let target = try path(0)
             guard let names = try? fileManager.contentsOfDirectory(atPath: target) else {
@@ -322,7 +325,73 @@ final class ExtensionNodeShims: @unchecked Sendable {
             return written
         }
     }
+    
+    private func fstat(arguments: [Any]) throws -> [String: Any] {
+        guard let descriptor = (arguments.first as? NSNumber)?.int32Value else {
+            throw ShimError.failed("fstat requires a file descriptor.", "EINVAL")
+        }
 
+        // stdin / stdout / stderr are owned by Tinycast's process,
+        // not by our fileHandles table.
+        if descriptor == 0 || descriptor == 1 || descriptor == 2 {
+            var info = Darwin.stat()
+
+            guard Darwin.fstat(descriptor, &info) == 0 else {
+                throw fileError("fstat")
+            }
+
+            return statResult(info)
+        }
+
+        guard fileHandles[descriptor] != nil else {
+            throw ShimError.failed(
+                "EBADF: bad file descriptor, fstat",
+                "EBADF"
+            )
+        }
+
+        var info = Darwin.stat()
+
+        guard Darwin.fstat(descriptor, &info) == 0 else {
+            throw fileError("fstat")
+        }
+
+        return statResult(info)
+    }
+    
+    private func statResult(_ info: Darwin.stat) -> [String: Any] {
+        let fileType = info.st_mode & S_IFMT
+
+        return [
+            "dev": Double(info.st_dev),
+            "ino": Double(info.st_ino),
+            "mode": Int(info.st_mode),
+            "nlink": Int(info.st_nlink),
+            "uid": Int(info.st_uid),
+            "gid": Int(info.st_gid),
+            "rdev": Double(info.st_rdev),
+            "size": Double(info.st_size),
+            "blksize": Int(info.st_blksize),
+            "blocks": Double(info.st_blocks),
+
+            "atimeMs": Double(info.st_atimespec.tv_sec) * 1000
+                + Double(info.st_atimespec.tv_nsec) / 1_000_000,
+
+            "mtimeMs": Double(info.st_mtimespec.tv_sec) * 1000
+                + Double(info.st_mtimespec.tv_nsec) / 1_000_000,
+
+            "ctimeMs": Double(info.st_ctimespec.tv_sec) * 1000
+                + Double(info.st_ctimespec.tv_nsec) / 1_000_000,
+
+            "birthtimeMs": Double(info.st_birthtimespec.tv_sec) * 1000
+                + Double(info.st_birthtimespec.tv_nsec) / 1_000_000,
+
+            "_isFile": fileType == S_IFREG,
+            "_isDirectory": fileType == S_IFDIR,
+            "_isSymbolicLink": fileType == S_IFLNK
+        ]
+    }
+    
     private func uninterrupted(_ body: () -> Int) -> Int {
         while true {
             let result = body()
@@ -344,31 +413,68 @@ final class ExtensionNodeShims: @unchecked Sendable {
         ESRCH: "ESRCH"
     ]
 
-    private func stat(path: String, followLinks: Bool) throws -> [String: Any] {
-        let attributes =
-            followLinks
-            ? try? fileManager.attributesOfItem(
-                atPath: URL(fileURLWithPath: path).resolvingSymlinksInPath().path)
-            : try? fileManager.attributesOfItem(atPath: path)
-        guard let attributes else { throw ShimError.noEntry(path, "stat") }
+    private func statFile(path: String, followLinks: Bool) throws -> [String: Any] {
+        let targetURL: URL
+
+        if followLinks {
+            targetURL = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        } else {
+            targetURL = URL(fileURLWithPath: path)
+        }
+
+        let attributes = try fileManager.attributesOfItem(atPath: targetURL.path)
 
         let type = attributes[.type] as? FileAttributeType
+
+        func number(_ key: FileAttributeKey) -> Double {
+            (attributes[key] as? NSNumber)?.doubleValue ?? 0
+        }
+
         func milliseconds(_ key: FileAttributeKey) -> Double {
             ((attributes[key] as? Date)?.timeIntervalSince1970 ?? 0) * 1000
         }
+
+        let permissions = Int(number(.posixPermissions))
+
+        let fileTypeBits: Int
+
+        switch type {
+        case .typeRegular:
+            fileTypeBits = 0o100000
+        case .typeDirectory:
+            fileTypeBits = 0o040000
+        case .typeSymbolicLink:
+            fileTypeBits = 0o120000
+        default:
+            fileTypeBits = 0
+        }
+
         return [
-            "size": (attributes[.size] as? NSNumber)?.doubleValue ?? 0,
-            "mode": (attributes[.posixPermissions] as? NSNumber)?.intValue ?? 0,
-            "mtimeMs": milliseconds(.modificationDate),
+            "dev": number(.systemNumber),
+            "ino": number(.systemFileNumber),
+
+            // Full POSIX st_mode, not just permissions.
+            "mode": fileTypeBits | permissions,
+
+            "nlink": number(.referenceCount),
+            "uid": number(.ownerAccountID),
+            "gid": number(.groupOwnerAccountID),
+            "rdev": 0,
+
+            "size": number(.size),
+            "blksize": 4096,
+            "blocks": ceil(number(.size) / 512),
+
             "atimeMs": milliseconds(.modificationDate),
+            "mtimeMs": milliseconds(.modificationDate),
             "ctimeMs": milliseconds(.creationDate),
             "birthtimeMs": milliseconds(.creationDate),
+
             "_isFile": type == .typeRegular,
             "_isDirectory": type == .typeDirectory,
             "_isSymbolicLink": type == .typeSymbolicLink
         ]
     }
-
     // MARK: - child_process
 
     private func process(method: String, arguments: [Any]) throws -> Any? {

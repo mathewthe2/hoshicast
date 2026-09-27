@@ -6,7 +6,13 @@
 import { hostCall, hostCallSync } from "./host.js";
 import { Buffer, bufferModule } from "./buffer.js";
 import { EventEmitter } from "./events.js";
-import { base64ToBytes, bytesToBase64, reportUncaught, utf8Decode, utf8Encode } from "./polyfills.js";
+import {
+  base64ToBytes,
+  bytesToBase64,
+  reportUncaught,
+  utf8Decode,
+  utf8Encode,
+} from "./polyfills.js";
 import {
   Duplex,
   PassThrough,
@@ -19,7 +25,11 @@ import {
   pipeline,
   pipelinePromise,
 } from "./streams.js";
-import { ReadableStream, TransformStream, WritableStream } from "./web-streams.js";
+import {
+  ReadableStream,
+  TransformStream,
+  WritableStream,
+} from "./web-streams.js";
 import { fileURLToPath, pathToFileURL, URL, URLSearchParams } from "./url.js";
 import { punycode } from "./punycode.js";
 import { upgradeToWebSocket } from "./websocket.js";
@@ -29,15 +39,108 @@ import { dgram } from "./dgram.js";
 
 /// Node's function exports per module: a lazy member survives `__toESM` only as an own key.
 const UNSUPPORTED_EXPORTS = {
-  net: ["BlockList", "SocketAddress", "connect", "createConnection", "createServer", "isIP", "isIPv4", "isIPv6", "Server", "Socket", "Stream"],
-  tls: ["getCiphers", "checkServerIdentity", "convertALPNProtocols", "createSecureContext", "SecureContext", "TLSSocket", "Server", "createServer", "connect"],
-  dns: ["lookup", "lookupService", "Resolver", "getServers", "setServers", "getDefaultResultOrder", "setDefaultResultOrder", "resolve", "resolve4", "resolve6", "resolveAny", "resolveCaa", "resolveCname", "resolveMx", "resolveNaptr", "resolveNs", "resolvePtr", "resolveSoa", "resolveSrv", "resolveTlsa", "resolveTxt", "reverse"],
-  vm: ["Script", "createContext", "createScript", "runInContext", "runInNewContext", "runInThisContext", "isContext", "compileFunction", "measureMemory"],
-  readline: ["Interface", "clearLine", "clearScreenDown", "createInterface", "cursorTo", "emitKeypressEvents", "moveCursor"],
-  worker_threads: ["MessagePort", "MessageChannel", "markAsUncloneable", "markAsUntransferable", "isMarkedAsUntransferable", "moveMessagePortToContext", "receiveMessageOnPort", "postMessageToThread", "Worker", "BroadcastChannel", "setEnvironmentData", "getEnvironmentData"],
-  http2: ["connect", "createServer", "createSecureServer", "getDefaultSettings", "getPackedSettings", "getUnpackedSettings", "performServerHandshake", "Http2ServerRequest", "Http2ServerResponse"],
+  net: [
+    "BlockList",
+    "SocketAddress",
+    "connect",
+    "createConnection",
+    "createServer",
+    "isIP",
+    "isIPv4",
+    "isIPv6",
+    "Server",
+    "Socket",
+    "Stream",
+  ],
+  tls: [
+    "getCiphers",
+    "checkServerIdentity",
+    "convertALPNProtocols",
+    "createSecureContext",
+    "SecureContext",
+    "TLSSocket",
+    "Server",
+    "createServer",
+    "connect",
+  ],
+  dns: [
+    "lookup",
+    "lookupService",
+    "Resolver",
+    "getServers",
+    "setServers",
+    "getDefaultResultOrder",
+    "setDefaultResultOrder",
+    "resolve",
+    "resolve4",
+    "resolve6",
+    "resolveAny",
+    "resolveCaa",
+    "resolveCname",
+    "resolveMx",
+    "resolveNaptr",
+    "resolveNs",
+    "resolvePtr",
+    "resolveSoa",
+    "resolveSrv",
+    "resolveTlsa",
+    "resolveTxt",
+    "reverse",
+  ],
+  vm: [
+    "Script",
+    "createContext",
+    "createScript",
+    "runInContext",
+    "runInNewContext",
+    "runInThisContext",
+    "isContext",
+    "compileFunction",
+    "measureMemory",
+  ],
+  readline: [
+    "Interface",
+    "clearLine",
+    "clearScreenDown",
+    "createInterface",
+    "cursorTo",
+    "emitKeypressEvents",
+    "moveCursor",
+  ],
+  worker_threads: [
+    "MessagePort",
+    "MessageChannel",
+    "markAsUncloneable",
+    "markAsUntransferable",
+    "isMarkedAsUntransferable",
+    "moveMessagePortToContext",
+    "receiveMessageOnPort",
+    "postMessageToThread",
+    "Worker",
+    "BroadcastChannel",
+    "setEnvironmentData",
+    "getEnvironmentData",
+  ],
+  http2: [
+    "connect",
+    "createServer",
+    "createSecureServer",
+    "getDefaultSettings",
+    "getPackedSettings",
+    "getUnpackedSettings",
+    "performServerHandshake",
+    "Http2ServerRequest",
+    "Http2ServerResponse",
+  ],
   domain: ["Domain", "createDomain", "create"],
-  diagnostics_channel: ["channel", "hasSubscribers", "subscribe", "unsubscribe", "tracingChannel", "Channel"],
+  diagnostics_channel: [
+    "channel",
+    "hasSubscribers",
+    "subscribe",
+    "unsubscribe",
+    "tracingChannel",
+    "Channel",
+  ],
   "stream/consumers": ["arrayBuffer", "blob", "buffer", "text", "json"],
 };
 
@@ -71,7 +174,9 @@ const path = {
     return absolute ? "/" + joined : joined;
   },
   join(...parts) {
-    const joined = parts.filter((part) => part !== undefined && part !== null && part !== "").join("/");
+    const joined = parts
+      .filter((part) => part !== undefined && part !== null && part !== "")
+      .join("/");
     return joined ? path.normalize(joined) : ".";
   },
   resolve(...parts) {
@@ -83,7 +188,8 @@ const path = {
       if (String(part).startsWith("/")) break;
     }
     if (!resolved.startsWith("/")) resolved = `${process.cwd()}/${resolved}`;
-    const normalized = "/" + normalizeSegments(resolved.split("/"), false).join("/");
+    const normalized =
+      "/" + normalizeSegments(resolved.split("/"), false).join("/");
     return normalized === "/" ? "/" : normalized.replace(/\/$/, "");
   },
   isAbsolute(input) {
@@ -99,7 +205,8 @@ const path = {
   basename(input, ext) {
     const text = String(input).replace(/\/+$/, "");
     let base = text.slice(text.lastIndexOf("/") + 1);
-    if (ext && base.endsWith(ext) && base !== ext) base = base.slice(0, -ext.length);
+    if (ext && base.endsWith(ext) && base !== ext)
+      base = base.slice(0, -ext.length);
     return base;
   },
   extname(input) {
@@ -111,16 +218,29 @@ const path = {
     const fromParts = path.resolve(from).split("/").filter(Boolean);
     const toParts = path.resolve(to).split("/").filter(Boolean);
     let shared = 0;
-    while (shared < fromParts.length && shared < toParts.length && fromParts[shared] === toParts[shared]) {
+    while (
+      shared < fromParts.length &&
+      shared < toParts.length &&
+      fromParts[shared] === toParts[shared]
+    ) {
       shared++;
     }
-    return [...Array(fromParts.length - shared).fill(".."), ...toParts.slice(shared)].join("/");
+    return [
+      ...Array(fromParts.length - shared).fill(".."),
+      ...toParts.slice(shared),
+    ].join("/");
   },
   parse(input) {
     const dir = path.dirname(input);
     const base = path.basename(input);
     const ext = path.extname(base);
-    return { root: String(input).startsWith("/") ? "/" : "", dir, base, ext, name: base.slice(0, base.length - ext.length) };
+    return {
+      root: String(input).startsWith("/") ? "/" : "",
+      dir,
+      base,
+      ext,
+      name: base.slice(0, base.length - ext.length),
+    };
   },
   format(parsed) {
     const dir = parsed.dir || parsed.root || "";
@@ -134,7 +254,15 @@ path.win32 = path;
 
 // ─── process ────────────────────────────────────────────────────────
 
-let bootEnvironment = { platform: "darwin", arch: "arm64", env: {}, cwd: "/", homedir: "/", tmpdir: "/tmp", execPath: "" };
+let bootEnvironment = {
+  platform: "darwin",
+  arch: "arm64",
+  env: {},
+  cwd: "/",
+  homedir: "/",
+  tmpdir: "/tmp",
+  execPath: "",
+};
 
 export function configureNodeShims(info) {
   bootEnvironment = { ...bootEnvironment, ...info };
@@ -146,10 +274,37 @@ export function configureNodeShims(info) {
 const processListeners = new Map();
 
 const SIGNALS = {
-  SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGILL: 4, SIGTRAP: 5, SIGABRT: 6, SIGIOT: 6, SIGFPE: 8, SIGKILL: 9,
-  SIGBUS: 10, SIGSEGV: 11, SIGSYS: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15, SIGURG: 16, SIGSTOP: 17,
-  SIGTSTP: 18, SIGCONT: 19, SIGCHLD: 20, SIGTTIN: 21, SIGTTOU: 22, SIGIO: 23, SIGXCPU: 24, SIGXFSZ: 25,
-  SIGVTALRM: 26, SIGPROF: 27, SIGWINCH: 28, SIGINFO: 29, SIGUSR1: 30, SIGUSR2: 31,
+  SIGHUP: 1,
+  SIGINT: 2,
+  SIGQUIT: 3,
+  SIGILL: 4,
+  SIGTRAP: 5,
+  SIGABRT: 6,
+  SIGIOT: 6,
+  SIGFPE: 8,
+  SIGKILL: 9,
+  SIGBUS: 10,
+  SIGSEGV: 11,
+  SIGSYS: 12,
+  SIGPIPE: 13,
+  SIGALRM: 14,
+  SIGTERM: 15,
+  SIGURG: 16,
+  SIGSTOP: 17,
+  SIGTSTP: 18,
+  SIGCONT: 19,
+  SIGCHLD: 20,
+  SIGTTIN: 21,
+  SIGTTOU: 22,
+  SIGIO: 23,
+  SIGXCPU: 24,
+  SIGXFSZ: 25,
+  SIGVTALRM: 26,
+  SIGPROF: 27,
+  SIGWINCH: 28,
+  SIGINFO: 29,
+  SIGUSR1: 30,
+  SIGUSR2: 31,
 };
 
 function signalNumber(signal) {
@@ -164,6 +319,27 @@ const process = {
   // Axios gates its Node http adapter on this tag; untagged, axios takes the fetch path.
   [Symbol.toStringTag]: "process",
   platform: "darwin",
+
+  binding(name) {
+    if (name === "constants") {
+      return {
+        fs: {
+          O_APPEND: 1024,
+          O_CREAT: 64,
+          O_EXCL: 128,
+          O_NOCTTY: 256,
+          O_RDONLY: 0,
+          O_RDWR: 2,
+          O_SYNC: 4096,
+          O_TRUNC: 512,
+          O_WRONLY: 1,
+          O_NOFOLLOW: 131072,
+        },
+      };
+    }
+
+    throw new Error(`process.binding("${name}") is not supported`);
+  },
   arch: "arm64",
   version: "v22.0.0",
   versions: { node: "22.0.0", v8: "12.0.0", tinycast: "1" },
@@ -175,8 +351,16 @@ const process = {
   ppid: 0,
   env: {},
   title: "tinycast-extension",
-  stdout: { write: (text) => console.log(String(text).replace(/\n$/, "")), isTTY: false, columns: 80 },
-  stderr: { write: (text) => console.error(String(text).replace(/\n$/, "")), isTTY: false, columns: 80 },
+  stdout: {
+    write: (text) => console.log(String(text).replace(/\n$/, "")),
+    isTTY: false,
+    columns: 80,
+  },
+  stderr: {
+    write: (text) => console.error(String(text).replace(/\n$/, "")),
+    isTTY: false,
+    columns: 80,
+  },
   stdin: { on: () => {}, resume: () => {}, pause: () => {}, isTTY: false },
   cwd: () => bootEnvironment.cwd,
   chdir: () => {
@@ -209,7 +393,13 @@ const process = {
     { bigint: () => BigInt(Math.round(Date.now() * 1e6)) },
   ),
   uptime: () => Date.now() / 1000,
-  memoryUsage: () => ({ rss: 0, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }),
+  memoryUsage: () => ({
+    rss: 0,
+    heapTotal: 0,
+    heapUsed: 0,
+    external: 0,
+    arrayBuffers: 0,
+  }),
   emitWarning: (warning) => console.warn(String(warning)),
   on(event, listener) {
     if (!processListeners.has(event)) processListeners.set(event, new Set());
@@ -358,51 +548,113 @@ function fsPath(input) {
 
 // Node takes a mode as a number or as an octal string, and Raycast's Swift wrapper passes "755".
 function fsMode(mode) {
-  const parsed = typeof mode === "string" ? Number.parseInt(mode, 8) : Math.trunc(Number(mode));
-  if (!Number.isFinite(parsed)) throw new TypeError(`Invalid file mode: ${mode}`);
+  const parsed =
+    typeof mode === "string"
+      ? Number.parseInt(mode, 8)
+      : Math.trunc(Number(mode));
+  if (!Number.isFinite(parsed))
+    throw new TypeError(`Invalid file mode: ${mode}`);
   return parsed & 0o7777;
 }
 
 const FILE_STREAM_CHUNK = 64 * 1024;
-const FS_CONSTANTS = { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1, O_RDONLY: 0, O_WRONLY: 1, O_RDWR: 2, O_APPEND: 8, O_NOFOLLOW: 256, O_CREAT: 512, O_TRUNC: 1024, O_EXCL: 2048 };
-const { O_RDONLY, O_WRONLY, O_RDWR, O_APPEND, O_CREAT, O_TRUNC, O_EXCL } = FS_CONSTANTS;
-const OPEN_FLAGS = {
-  r: O_RDONLY, "r+": O_RDWR,
-  w: O_WRONLY | O_CREAT | O_TRUNC, "w+": O_RDWR | O_CREAT | O_TRUNC,
-  wx: O_WRONLY | O_CREAT | O_TRUNC | O_EXCL, "wx+": O_RDWR | O_CREAT | O_TRUNC | O_EXCL,
-  a: O_WRONLY | O_CREAT | O_APPEND, "a+": O_RDWR | O_CREAT | O_APPEND,
-  ax: O_WRONLY | O_CREAT | O_APPEND | O_EXCL, "ax+": O_RDWR | O_CREAT | O_APPEND | O_EXCL,
+const FS_CONSTANTS = {
+  F_OK: 0,
+  R_OK: 4,
+  W_OK: 2,
+  X_OK: 1,
+  O_RDONLY: 0,
+  O_WRONLY: 1,
+  O_RDWR: 2,
+  O_APPEND: 8,
+  O_NOFOLLOW: 256,
+  O_CREAT: 512,
+  O_TRUNC: 1024,
+  O_EXCL: 2048,
 };
+const { O_RDONLY, O_WRONLY, O_RDWR, O_APPEND, O_CREAT, O_TRUNC, O_EXCL } =
+  FS_CONSTANTS;
+const OPEN_FLAGS = {
+  r: O_RDONLY,
+  "r+": O_RDWR,
+  w: O_WRONLY | O_CREAT | O_TRUNC,
+  "w+": O_RDWR | O_CREAT | O_TRUNC,
+  wx: O_WRONLY | O_CREAT | O_TRUNC | O_EXCL,
+  "wx+": O_RDWR | O_CREAT | O_TRUNC | O_EXCL,
+  a: O_WRONLY | O_CREAT | O_APPEND,
+  "a+": O_RDWR | O_CREAT | O_APPEND,
+  ax: O_WRONLY | O_CREAT | O_APPEND | O_EXCL,
+  "ax+": O_RDWR | O_CREAT | O_APPEND | O_EXCL,
+};
+
+function fsStatByFdSync(fd) {
+  return new Stats(hostCallSync("fs", "fstat", [fd]));
+}
 
 const fs = {
   constants: FS_CONSTANTS,
 
   openSync(file, flags = "r", mode = 0o666) {
     const value = typeof flags === "number" ? flags : OPEN_FLAGS[flags];
-    if (value === undefined) throw new TypeError(`Invalid file flags: ${flags}`);
+    if (value === undefined)
+      throw new TypeError(`Invalid file flags: ${flags}`);
     return hostCallSync("fs", "open", [fsPath(file), value, fsMode(mode)]);
   },
   closeSync(fd) {
     hostCallSync("fs", "close", [fd]);
   },
-  readSync(fd, buffer, offset = 0, length = buffer.length - offset, position = null) {
-    if (offset < 0 || length < 0 || offset + length > buffer.length) throw new RangeError("Read exceeds buffer bounds");
-    const bytes = base64ToBytes(hostCallSync("fs", "read", [fd, length, position]));
+  fstatSync(fd) {
+    return fsStatByFdSync(fd);
+  },
+  readSync(
+    fd,
+    buffer,
+    offset = 0,
+    length = buffer.length - offset,
+    position = null,
+  ) {
+    if (offset < 0 || length < 0 || offset + length > buffer.length)
+      throw new RangeError("Read exceeds buffer bounds");
+    const bytes = base64ToBytes(
+      hostCallSync("fs", "read", [fd, length, position]),
+    );
     buffer.set(bytes, offset);
     return bytes.length;
   },
-  writeSync(fd, buffer, offset = 0, length = buffer.length - offset, position = null) {
-    if (offset < 0 || length < 0 || offset + length > buffer.length) throw new RangeError("Write exceeds buffer bounds");
-    return hostCallSync("fs", "write", [fd, bytesToBase64(buffer.subarray(offset, offset + length)), position]);
+  writeSync(
+    fd,
+    buffer,
+    offset = 0,
+    length = buffer.length - offset,
+    position = null,
+  ) {
+    if (offset < 0 || length < 0 || offset + length > buffer.length)
+      throw new RangeError("Write exceeds buffer bounds");
+    return hostCallSync("fs", "write", [
+      fd,
+      bytesToBase64(buffer.subarray(offset, offset + length)),
+      position,
+    ]);
   },
   readFileSync(file, options) {
-    return decodeFileResult(hostCallSync("fs", "readFile", [fsPath(file)]), options);
+    return decodeFileResult(
+      hostCallSync("fs", "readFile", [fsPath(file)]),
+      options,
+    );
   },
   writeFileSync(file, data, options) {
-    hostCallSync("fs", "writeFile", [fsPath(file), encodeFileData(data, options), false]);
+    hostCallSync("fs", "writeFile", [
+      fsPath(file),
+      encodeFileData(data, options),
+      false,
+    ]);
   },
   appendFileSync(file, data, options) {
-    hostCallSync("fs", "writeFile", [fsPath(file), encodeFileData(data, options), true]);
+    hostCallSync("fs", "writeFile", [
+      fsPath(file),
+      encodeFileData(data, options),
+      true,
+    ]);
   },
   existsSync(file) {
     try {
@@ -429,14 +681,22 @@ const fs = {
   },
   readdirSync(dir, options) {
     const entries = hostCallSync("fs", "readdir", [fsPath(dir)]);
-    if (options?.withFileTypes) return entries.map((entry) => new Dirent(entry));
+    if (options?.withFileTypes)
+      return entries.map((entry) => new Dirent(entry));
     return entries.map((entry) => entry.name);
   },
   mkdirSync(dir, options) {
-    return hostCallSync("fs", "mkdir", [fsPath(dir), !!(options === true || options?.recursive)]);
+    return hostCallSync("fs", "mkdir", [
+      fsPath(dir),
+      !!(options === true || options?.recursive),
+    ]);
   },
   rmSync(target, options) {
-    hostCallSync("fs", "remove", [fsPath(target), !!options?.recursive, !!options?.force]);
+    hostCallSync("fs", "remove", [
+      fsPath(target),
+      !!options?.recursive,
+      !!options?.force,
+    ]);
   },
   rmdirSync(target, options) {
     hostCallSync("fs", "remove", [fsPath(target), !!options?.recursive, false]);
@@ -455,7 +715,9 @@ const fs = {
   },
   accessSync(target) {
     if (!fs.existsSync(target)) {
-      const error = new Error(`ENOENT: no such file or directory, access '${fsPath(target)}'`);
+      const error = new Error(
+        `ENOENT: no such file or directory, access '${fsPath(target)}'`,
+      );
       error.code = "ENOENT";
       throw error;
     }
@@ -480,7 +742,9 @@ const fs = {
       highWaterMark: span,
       read() {
         try {
-          const bytes = base64ToBytes(hostCallSync("fs", "readRange", [target, offset, span]));
+          const bytes = base64ToBytes(
+            hostCallSync("fs", "readRange", [target, offset, span]),
+          );
           offset += bytes.length;
           this.push(bytes.length ? Buffer.from(bytes) : null);
         } catch (error) {
@@ -502,7 +766,8 @@ const fs = {
     };
     const stream = new Writable({
       write(chunk, encoding, callback) {
-        const data = typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk;
+        const data =
+          typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk;
         try {
           put(data);
         } catch (error) {
@@ -563,7 +828,8 @@ class Dir {
   }
   async *[Symbol.asyncIterator]() {
     try {
-      for (let entry = this.readSync(); entry; entry = this.readSync()) yield entry;
+      for (let entry = this.readSync(); entry; entry = this.readSync())
+        yield entry;
     } finally {
       if (!this.#closed) this.closeSync();
     }
@@ -574,7 +840,8 @@ fs.Dir = Dir;
 // Callback forms: run the same sync host call, hand the result back on a microtask.
 function callbackify(syncFn) {
   return (...args) => {
-    const callback = typeof args[args.length - 1] === "function" ? args.pop() : null;
+    const callback =
+      typeof args[args.length - 1] === "function" ? args.pop() : null;
     let value;
     let error = null;
     try {
@@ -613,11 +880,18 @@ for (const [name, sync] of [
 }
 for (const name of ["read", "write"]) {
   fs[name] = (fd, buffer, offset, length, position, callback) => {
-    callbackify(fs[`${name}Sync`])(fd, buffer, offset, length, position,
-      (error, count) => callback(error, count, buffer));
+    callbackify(fs[`${name}Sync`])(
+      fd,
+      buffer,
+      offset,
+      length,
+      position,
+      (error, count) => callback(error, count, buffer),
+    );
   };
 }
-fs.exists = (file, callback) => queueMicrotask(() => callback(fs.existsSync(file)));
+fs.exists = (file, callback) =>
+  queueMicrotask(() => callback(fs.existsSync(file)));
 
 function promisify1(syncFn) {
   return async (...args) => syncFn(...args);
@@ -650,13 +924,26 @@ fs.promises = fsPromises;
 /// Node stringifies every defined value, so `{ ...process.env, DEBUG: 1 }` must not drop the override.
 function childEnv(env) {
   if (env == null) return env;
-  return Object.fromEntries(Object.entries(env).filter(([, value]) => value !== undefined).map(([key, value]) => [key, String(value)]));
+  return Object.fromEntries(
+    Object.entries(env)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, String(value)]),
+  );
 }
 
 function normalizeExecResult(raw, options) {
-  const wantsBuffer = options?.encoding === "buffer" || options?.encoding === null;
-  const decode = (base64) => (wantsBuffer ? Buffer.from(base64ToBytes(base64)) : utf8Decode(base64ToBytes(base64)));
-  return { stdout: decode(raw.stdout), stderr: decode(raw.stderr), status: raw.status, signal: raw.signal ?? null };
+  const wantsBuffer =
+    options?.encoding === "buffer" || options?.encoding === null;
+  const decode = (base64) =>
+    wantsBuffer
+      ? Buffer.from(base64ToBytes(base64))
+      : utf8Decode(base64ToBytes(base64));
+  return {
+    stdout: decode(raw.stdout),
+    stderr: decode(raw.stderr),
+    status: raw.status,
+    signal: raw.signal ?? null,
+  };
 }
 
 function execError(result, command) {
@@ -674,7 +961,15 @@ function execError(result, command) {
 const childProcess = {
   execSync(command, options = {}) {
     const raw = hostCallSync("proc", "run", [
-      { shell: true, command: String(command), args: [], cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      {
+        shell: true,
+        command: String(command),
+        args: [],
+        cwd: options.cwd,
+        env: childEnv(options.env),
+        timeout: options.timeout,
+        input: options.input ? bytesToBase64(Buffer.from(options.input)) : null,
+      },
     ]);
     const result = normalizeExecResult(raw, options);
     if (result.status !== 0) throw execError(result, command);
@@ -686,7 +981,15 @@ const childProcess = {
       args = [];
     }
     const raw = hostCallSync("proc", "run", [
-      { shell: false, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      {
+        shell: false,
+        command: String(file),
+        args: args.map(String),
+        cwd: options.cwd,
+        env: childEnv(options.env),
+        timeout: options.timeout,
+        input: options.input ? bytesToBase64(Buffer.from(options.input)) : null,
+      },
     ]);
     const result = normalizeExecResult(raw, options);
     if (result.status !== 0) throw execError(result, file);
@@ -698,17 +1001,40 @@ const childProcess = {
       args = [];
     }
     const raw = hostCallSync("proc", "run", [
-      { shell: !!options.shell, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      {
+        shell: !!options.shell,
+        command: String(file),
+        args: args.map(String),
+        cwd: options.cwd,
+        env: childEnv(options.env),
+        timeout: options.timeout,
+        input: options.input ? bytesToBase64(Buffer.from(options.input)) : null,
+      },
     ]);
     const result = normalizeExecResult(raw, options);
-    return { ...result, pid: 0, output: [null, result.stdout, result.stderr], error: undefined };
+    return {
+      ...result,
+      pid: 0,
+      output: [null, result.stdout, result.stderr],
+      error: undefined,
+    };
   },
   exec(command, options, callback) {
     if (typeof options === "function") {
       callback = options;
       options = {};
     }
-    return runAsync({ shell: true, command: String(command), args: [], ...pickRunOptions(options) }, options, callback, command);
+    return runAsync(
+      {
+        shell: true,
+        command: String(command),
+        args: [],
+        ...pickRunOptions(options),
+      },
+      options,
+      callback,
+      command,
+    );
   },
   execFile(file, args, options, callback) {
     if (typeof args === "function") {
@@ -721,7 +1047,12 @@ const childProcess = {
     }
     if (!Array.isArray(args)) args = [];
     return runAsync(
-      { shell: false, command: String(file), args: args.map(String), ...pickRunOptions(options) },
+      {
+        shell: false,
+        command: String(file),
+        args: args.map(String),
+        ...pickRunOptions(options),
+      },
       options,
       callback,
       file,
@@ -735,7 +1066,9 @@ const childProcess = {
     return new ChildProcess(String(file), args.map(String), options);
   },
   fork() {
-    throw new Error("child_process.fork is not supported in Tinycast extensions.");
+    throw new Error(
+      "child_process.fork is not supported in Tinycast extensions.",
+    );
   },
 };
 
@@ -743,7 +1076,10 @@ const childProcess = {
 
 function cryptoBytes(value, encoding) {
   if (typeof value === "string") return Buffer.from(value, encoding || "utf8");
-  if (ArrayBuffer.isView(value)) return Buffer.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+  if (ArrayBuffer.isView(value))
+    return Buffer.from(
+      new Uint8Array(value.buffer, value.byteOffset, value.byteLength),
+    );
   return Buffer.from(value);
 }
 
@@ -777,17 +1113,28 @@ class Hash {
 // Buffers until `final`: a block cipher's concatenated output still matches Node's byte for byte.
 class Cipher {
   constructor(algorithm, key, iv, decrypt) {
-    const name = String(algorithm).toLowerCase().replace(/^aes(128|192|256)$/, "aes-$1-cbc");
+    const name = String(algorithm)
+      .toLowerCase()
+      .replace(/^aes(128|192|256)$/, "aes-$1-cbc");
     const match = /^aes-(128|192|256)-(cbc|ecb)$/.exec(name);
-    if (!match) throw cryptoError("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER");
+    if (!match)
+      throw cryptoError("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER");
     this._mode = match[2];
     this._key = cryptoBytes(key);
     this._iv = iv == null ? Buffer.alloc(0) : cryptoBytes(iv);
     if (this._key.length !== Number(match[1]) / 8) {
-      throw cryptoError("Invalid key length", "ERR_CRYPTO_INVALID_KEYLEN", RangeError);
+      throw cryptoError(
+        "Invalid key length",
+        "ERR_CRYPTO_INVALID_KEYLEN",
+        RangeError,
+      );
     }
     if (this._iv.length !== (this._mode === "cbc" ? 16 : 0)) {
-      throw cryptoError("Invalid initialization vector", "ERR_CRYPTO_INVALID_IV", TypeError);
+      throw cryptoError(
+        "Invalid initialization vector",
+        "ERR_CRYPTO_INVALID_IV",
+        TypeError,
+      );
     }
     this._decrypt = decrypt;
     this._padding = true;
@@ -795,12 +1142,14 @@ class Cipher {
     this._finished = false;
   }
   update(data, inputEncoding, outputEncoding) {
-    if (this._finished) throw new Error("Trying to add data in unsupported state");
+    if (this._finished)
+      throw new Error("Trying to add data in unsupported state");
     this._chunks.push(cryptoBytes(data, inputEncoding));
     return outputEncoding ? "" : Buffer.alloc(0);
   }
   final(outputEncoding) {
-    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (this._finished)
+      throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
     this._finished = true;
     const base64 = hostCallSync("crypto", "cipher", [
       this._mode,
@@ -814,7 +1163,8 @@ class Cipher {
     return outputEncoding ? bytes.toString(outputEncoding) : bytes;
   }
   setAutoPadding(enabled = true) {
-    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (this._finished)
+      throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
     this._padding = Boolean(enabled);
     return this;
   }
@@ -834,7 +1184,9 @@ function pbkdf2Sync(password, salt, iterations, keylen, digest) {
 const cryptoModule = {
   randomUUID: () => hostCallSync("crypto", "uuid", []),
   randomBytes(size, callback) {
-    const bytes = Buffer.from(base64ToBytes(hostCallSync("crypto", "random", [size | 0])));
+    const bytes = Buffer.from(
+      base64ToBytes(hostCallSync("crypto", "random", [size | 0])),
+    );
     if (callback) {
       queueMicrotask(() => callback(null, bytes));
       return;
@@ -842,7 +1194,9 @@ const cryptoModule = {
     return bytes;
   },
   randomFillSync(target) {
-    const bytes = base64ToBytes(hostCallSync("crypto", "random", [target.length]));
+    const bytes = base64ToBytes(
+      hostCallSync("crypto", "random", [target.length]),
+    );
     target.set(bytes.subarray(0, target.length));
     return target;
   },
@@ -852,17 +1206,24 @@ const cryptoModule = {
       min = 0;
     }
     const bytes = base64ToBytes(hostCallSync("crypto", "random", [4]));
-    const value = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+    const value =
+      ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
     return min + (value % (max - min));
   },
   createHash: (algorithm) => new Hash(algorithm),
-  createHmac: (algorithm, key) => new Hash(algorithm, bytesToBase64(cryptoBytes(key))),
+  createHmac: (algorithm, key) =>
+    new Hash(algorithm, bytesToBase64(cryptoBytes(key))),
   createCipheriv: (algorithm, key, iv) => new Cipher(algorithm, key, iv, false),
-  createDecipheriv: (algorithm, key, iv) => new Cipher(algorithm, key, iv, true),
+  createDecipheriv: (algorithm, key, iv) =>
+    new Cipher(algorithm, key, iv, true),
   pbkdf2Sync,
   pbkdf2(password, salt, iterations, keylen, digest, callback) {
     if (typeof callback !== "function") {
-      throw cryptoError('The "callback" argument must be of type function.', "ERR_INVALID_ARG_TYPE", TypeError);
+      throw cryptoError(
+        'The "callback" argument must be of type function.',
+        "ERR_INVALID_ARG_TYPE",
+        TypeError,
+      );
     }
     const key = pbkdf2Sync(password, salt, iterations, keylen, digest);
     queueMicrotask(() => callback(null, key));
@@ -873,13 +1234,22 @@ const cryptoModule = {
   webcrypto: null,
   constants: {},
 };
-cryptoModule.webcrypto = { randomUUID: cryptoModule.randomUUID, getRandomValues: cryptoModule.getRandomValues, subtle: undefined };
+cryptoModule.webcrypto = {
+  randomUUID: cryptoModule.randomUUID,
+  getRandomValues: cryptoModule.getRandomValues,
+  subtle: undefined,
+};
 if (!globalThis.crypto) globalThis.crypto = cryptoModule.webcrypto;
 
 // ─── zlib ───────────────────────────────────────────────────────────
 
 function zlibSync(method) {
-  return (data) => Buffer.from(base64ToBytes(hostCallSync("zlib", method, [bytesToBase64(Buffer.from(data))])));
+  return (data) =>
+    Buffer.from(
+      base64ToBytes(
+        hostCallSync("zlib", method, [bytesToBase64(Buffer.from(data))]),
+      ),
+    );
 }
 
 // minizlib swaps `Buffer.concat` for a no-op around `_processChunk`, so hold the real one.
@@ -897,7 +1267,9 @@ class Unzip extends EventEmitter {
     const input = concatBuffers(this._chunks);
     this._chunks = [];
     if (!input.length) return input;
-    return zlibSync(input[0] === 0x1f && input[1] === 0x8b ? "gunzip" : "inflate")(input);
+    return zlibSync(
+      input[0] === 0x1f && input[1] === 0x8b ? "gunzip" : "inflate",
+    )(input);
   }
   close() {
     this._chunks = [];
@@ -921,7 +1293,14 @@ const zlibImpl = {
   },
   constants: {},
 };
-for (const name of ["gzip", "gunzip", "deflate", "inflate", "deflateRaw", "inflateRaw"]) {
+for (const name of [
+  "gzip",
+  "gunzip",
+  "deflate",
+  "inflate",
+  "deflateRaw",
+  "inflateRaw",
+]) {
   zlibImpl[name] = callbackify(zlibImpl[`${name}Sync`]);
 }
 const zlib = unsupportedModule("zlib", zlibImpl);
@@ -942,8 +1321,19 @@ class ChildProcess extends EventEmitter {
     const self = this;
     this.stdin = new EventEmitter();
     this.stdin.writable = true;
-    this.stdin.write = (chunk) => (self._input.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : Buffer.from(chunk)), true);
-    this.stdin.end = (chunk) => { if (chunk !== undefined) this.stdin.write(chunk); self._start(file, args, options); return this.stdin; };
+    this.stdin.write = (chunk) => (
+      self._input.push(
+        typeof chunk === "string"
+          ? Buffer.from(chunk, "utf8")
+          : Buffer.from(chunk),
+      ),
+      true
+    );
+    this.stdin.end = (chunk) => {
+      if (chunk !== undefined) this.stdin.write(chunk);
+      self._start(file, args, options);
+      return this.stdin;
+    };
     this.stdin.destroy = () => {};
     this.stdio = [this.stdin, this.stdout, this.stderr];
 
@@ -958,18 +1348,30 @@ class ChildProcess extends EventEmitter {
   _start(file, args, options) {
     if (this._started) return;
     this._started = true;
-    const input = this._input.length ? bytesToBase64(Buffer.concat(this._input)) : null;
-    const { pid, exit } = startChild({
-      shell: !!options.shell,
-      command: file,
-      args,
-      cwd: options.cwd,
-      env: childEnv(options.env),
-      timeout: options.timeout,
-      input,
-      // `detached` only makes a process group; only an unread child may answer before it exits.
-      detached: !!options.detached && (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) === "ignore",
-    }, (pid) => Promise.all([pipeChild(pid, 1, this.stdout), pipeChild(pid, 2, this.stderr)]));
+    const input = this._input.length
+      ? bytesToBase64(Buffer.concat(this._input))
+      : null;
+    const { pid, exit } = startChild(
+      {
+        shell: !!options.shell,
+        command: file,
+        args,
+        cwd: options.cwd,
+        env: childEnv(options.env),
+        timeout: options.timeout,
+        input,
+        // `detached` only makes a process group; only an unread child may answer before it exits.
+        detached:
+          !!options.detached &&
+          (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) ===
+            "ignore",
+      },
+      (pid) =>
+        Promise.all([
+          pipeChild(pid, 1, this.stdout),
+          pipeChild(pid, 2, this.stderr),
+        ]),
+    );
     this.pid = pid;
     if (pid) queueMicrotask(() => this.emit("spawn"));
     exit.then(
@@ -1040,7 +1442,12 @@ childProcess.execFile[PROMISIFY_CUSTOM] = (file, args, options) =>
   });
 
 function pickRunOptions(options = {}) {
-  return { cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null };
+  return {
+    cwd: options.cwd,
+    env: childEnv(options.env),
+    timeout: options.timeout,
+    input: options.input ? bytesToBase64(Buffer.from(options.input)) : null,
+  };
 }
 
 /// Node guarantees `stdout` / `stderr` on a failed exec's error, and extensions inspect them (an
@@ -1062,7 +1469,9 @@ function startChild(spec, drain) {
     const pid = hostCallSync("proc", "start", [spec]);
     const exit = spec.detached
       ? Promise.resolve({ stdout: "", stderr: "", status: 0 })
-      : Promise.resolve(drain?.(pid)).then(() => hostCall("proc", "wait", [pid]));
+      : Promise.resolve(drain?.(pid)).then(() =>
+          hostCall("proc", "wait", [pid]),
+        );
     return { pid, exit };
   } catch (error) {
     return { pid: undefined, exit: Promise.reject(error) };
@@ -1084,7 +1493,8 @@ async function pipeChild(pid, fd, stream) {
 function utf8Boundary(bytes) {
   for (let i = bytes.length - 1; i >= Math.max(0, bytes.length - 3); i--) {
     if ((bytes[i] & 0xc0) === 0x80) continue;
-    const need = bytes[i] >= 0xf0 ? 4 : bytes[i] >= 0xe0 ? 3 : bytes[i] >= 0xc0 ? 2 : 1;
+    const need =
+      bytes[i] >= 0xf0 ? 4 : bytes[i] >= 0xe0 ? 3 : bytes[i] >= 0xc0 ? 2 : 1;
     return bytes.length - i < need ? i : bytes.length;
   }
   return bytes.length;
@@ -1115,12 +1525,24 @@ function runAsync(spec, options, callback, label) {
     });
   if (callback) {
     promise.then(
-      (result) => callback(result.status === 0 ? null : execError(result, label), result.stdout, result.stderr),
+      (result) =>
+        callback(
+          result.status === 0 ? null : execError(result, label),
+          result.stdout,
+          result.stderr,
+        ),
       (error) => callback(error, error.stdout ?? "", error.stderr ?? ""),
     );
   }
   // Node returns a ChildProcess; extensions mostly ignore it or await the promisified form.
-  const handle = { pid, killed: false, kill: (signal) => !exited && signalChild(handle, signal), on: () => handle, stdout: null, stderr: null };
+  const handle = {
+    pid,
+    killed: false,
+    kill: (signal) => !exited && signalChild(handle, signal),
+    on: () => handle,
+    stdout: null,
+    stderr: null,
+  };
   handle.then = promise.then.bind(promise);
   handle.catch = promise.catch.bind(promise);
   handle[Symbol.for("nodejs.util.promisify.custom")] = () => promise;
@@ -1148,7 +1570,8 @@ class IncomingMessage extends PassThrough {
     );
     // URLSession folds repeated `Set-Cookie` headers into one line; Node always hands out an array.
     if (typeof this.headers["set-cookie"] === "string") {
-      this.headers["set-cookie"] = this.headers["set-cookie"].split(SET_COOKIE_BOUNDARY);
+      this.headers["set-cookie"] =
+        this.headers["set-cookie"].split(SET_COOKIE_BOUNDARY);
     }
     this.rawHeaders = Object.entries(this.headers).flatMap(([name, value]) =>
       [value].flat().flatMap((item) => [name, item]),
@@ -1170,16 +1593,25 @@ function headerError(message, code) {
 
 function validateHeaderName(name) {
   if (typeof name !== "string" || !HEADER_TOKEN.test(name)) {
-    throw headerError(`Header name must be a valid HTTP token ["${name}"]`, "ERR_INVALID_HTTP_TOKEN");
+    throw headerError(
+      `Header name must be a valid HTTP token ["${name}"]`,
+      "ERR_INVALID_HTTP_TOKEN",
+    );
   }
 }
 
 function validateHeaderValue(name, value) {
   if (value === undefined) {
-    throw headerError(`Invalid value "undefined" for header "${name}"`, "ERR_HTTP_INVALID_HEADER_VALUE");
+    throw headerError(
+      `Invalid value "undefined" for header "${name}"`,
+      "ERR_HTTP_INVALID_HEADER_VALUE",
+    );
   }
   if (HEADER_VALUE.test(String(value))) {
-    throw headerError(`Invalid character in header content ["${name}"]`, "ERR_INVALID_CHAR");
+    throw headerError(
+      `Invalid character in header content ["${name}"]`,
+      "ERR_INVALID_CHAR",
+    );
   }
 }
 
@@ -1212,7 +1644,8 @@ class ClientRequest extends EventEmitter {
     this._headers = new Map();
     this._chunks = [];
     this._destroyed = false;
-    for (const [name, value] of Object.entries(options.headers ?? {})) this.setHeader(name, value);
+    for (const [name, value] of Object.entries(options.headers ?? {}))
+      this.setHeader(name, value);
     if (callback) this.once("response", callback);
     // Any other agent shape — agent-base 6 extends EventEmitter — would try to open a socket.
     if (options.agent instanceof Agent) options.agent.addRequest(this, options);
@@ -1222,7 +1655,10 @@ class ClientRequest extends EventEmitter {
   _implicitHeader() {}
 
   setHeader(name, value) {
-    this._headers.set(String(name).toLowerCase(), Array.isArray(value) ? value.join(", ") : String(value));
+    this._headers.set(
+      String(name).toLowerCase(),
+      Array.isArray(value) ? value.join(", ") : String(value),
+    );
     return this;
   }
 
@@ -1280,7 +1716,8 @@ class ClientRequest extends EventEmitter {
   flushHeaders() {}
 
   async _send() {
-    if (String(this.getHeader("upgrade") ?? "").toLowerCase() === "websocket") return this._upgrade();
+    if (String(this.getHeader("upgrade") ?? "").toLowerCase() === "websocket")
+      return this._upgrade();
     // Content negotiation belongs to the transport, which decodes for us and reports the result.
     this.removeHeader("accept-encoding");
     const body = this._chunks.length ? Buffer.concat(this._chunks) : null;
@@ -1301,7 +1738,11 @@ class ClientRequest extends EventEmitter {
       this.emit("close");
     } catch (error) {
       clearTimeout(this._timer);
-      if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
+      if (!this._destroyed)
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error(String(error)),
+        );
     }
   }
 
@@ -1313,12 +1754,16 @@ class ClientRequest extends EventEmitter {
         url: this.url.replace(/^http/, "ws"),
         protocols: splitList(headers["sec-websocket-protocol"]),
         headers: Object.fromEntries(
-          Object.entries(headers).filter(([name]) => !HANDSHAKE_HEADERS.has(name)),
+          Object.entries(headers).filter(
+            ([name]) => !HANDSHAKE_HEADERS.has(name),
+          ),
         ),
       });
       clearTimeout(this._timer);
       if (this._destroyed) return socket.destroy();
-      const accept = new Hash("sha1").update(`${headers["sec-websocket-key"] ?? ""}${WEBSOCKET_GUID}`).digest("base64");
+      const accept = new Hash("sha1")
+        .update(`${headers["sec-websocket-key"] ?? ""}${WEBSOCKET_GUID}`)
+        .digest("base64");
       const response = new IncomingMessage({
         status: 101,
         statusText: "Switching Protocols",
@@ -1329,10 +1774,15 @@ class ClientRequest extends EventEmitter {
           ...(protocol ? { "sec-websocket-protocol": protocol } : {}),
         },
       });
-      if (!this.emit("upgrade", response, socket, Buffer.alloc(0))) socket.destroy();
+      if (!this.emit("upgrade", response, socket, Buffer.alloc(0)))
+        socket.destroy();
     } catch (error) {
       clearTimeout(this._timer);
-      if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
+      if (!this._destroyed)
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error(String(error)),
+        );
     }
   }
 }
@@ -1341,23 +1791,36 @@ const WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 /// URLSession writes the handshake itself; forwarding these would have it refuse the request.
 const HANDSHAKE_HEADERS = new Set([
-  "connection", "upgrade", "host", "sec-websocket-key", "sec-websocket-version",
-  "sec-websocket-extensions", "sec-websocket-protocol",
+  "connection",
+  "upgrade",
+  "host",
+  "sec-websocket-key",
+  "sec-websocket-version",
+  "sec-websocket-extensions",
+  "sec-websocket-protocol",
 ]);
 
 function splitList(value) {
-  return String(value ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function httpRequest(input, options, callback, scheme = "http:") {
-  if (typeof options === "function") return httpRequest(input, {}, options, scheme);
+  if (typeof options === "function")
+    return httpRequest(input, {}, options, scheme);
   if (typeof input === "string" || input instanceof URL) {
     return new ClientRequest(String(input), options ?? {}, callback);
   }
   const spec = input ?? {};
   const host = spec.hostname ?? spec.host ?? "localhost";
   const port = spec.port ? `:${spec.port}` : "";
-  return new ClientRequest(`${spec.protocol ?? scheme}//${host}${port}${spec.path ?? "/"}`, spec, callback);
+  return new ClientRequest(
+    `${spec.protocol ?? scheme}//${host}${port}${spec.path ?? "/"}`,
+    spec,
+    callback,
+  );
 }
 
 function httpGet(input, options, callback, scheme) {
@@ -1368,11 +1831,13 @@ function httpGet(input, options, callback, scheme) {
 
 function inspect(value, depth = 2) {
   if (typeof value === "string") return `'${value}'`;
-  if (typeof value === "function") return `[Function: ${value.name || "anonymous"}]`;
+  if (typeof value === "function")
+    return `[Function: ${value.name || "anonymous"}]`;
   if (value instanceof Error) return value.stack || String(value);
   if (value === null || typeof value !== "object") return String(value);
   if (depth < 0) return Array.isArray(value) ? "[Array]" : "[Object]";
-  if (Array.isArray(value)) return `[ ${value.map((item) => inspect(item, depth - 1)).join(", ")} ]`;
+  if (Array.isArray(value))
+    return `[ ${value.map((item) => inspect(item, depth - 1)).join(", ")} ]`;
   const body = Object.keys(value)
     .map((key) => `${key}: ${inspect(value[key], depth - 1)}`)
     .join(", ");
@@ -1380,7 +1845,8 @@ function inspect(value, depth = 2) {
 }
 
 function format(first, ...rest) {
-  if (typeof first !== "string") return [first, ...rest].map((value) => inspect(value)).join(" ");
+  if (typeof first !== "string")
+    return [first, ...rest].map((value) => inspect(value)).join(" ");
   let index = 0;
   const text = first.replace(/%[sdifjoO%]/g, (token) => {
     if (token === "%%") return "%";
@@ -1403,11 +1869,26 @@ function format(first, ...rest) {
   return [text, ...rest.slice(index).map((value) => inspect(value))].join(" ");
 }
 
-const TYPED_ARRAYS = [Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array];
+const TYPED_ARRAYS = [
+  Int8Array,
+  Uint8Array,
+  Uint8ClampedArray,
+  Int16Array,
+  Uint16Array,
+  Int32Array,
+  Uint32Array,
+  Float32Array,
+  Float64Array,
+  BigInt64Array,
+  BigUint64Array,
+];
 const BOXED_TAGS = ["Boolean", "Number", "String", "Symbol", "BigInt"];
 
 const tagOf = (value) => Object.prototype.toString.call(value).slice(8, -1);
-const isBoxed = (value) => typeof value === "object" && value !== null && BOXED_TAGS.includes(tagOf(value));
+const isBoxed = (value) =>
+  typeof value === "object" &&
+  value !== null &&
+  BOXED_TAGS.includes(tagOf(value));
 
 /// Node's whole `util.types` table, because a bundle that reaches an absent member gets a TypeError
 /// where the predicate would simply have answered `false` — node-fetch calls `isBoxedPrimitive` on
@@ -1428,28 +1909,44 @@ const types = {
   isModuleNamespaceObject: (value) => tagOf(value) === "Module",
   isArrayBuffer: (value) => value instanceof ArrayBuffer,
   isSharedArrayBuffer: (value) => tagOf(value) === "SharedArrayBuffer",
-  isAnyArrayBuffer: (value) => value instanceof ArrayBuffer || tagOf(value) === "SharedArrayBuffer",
+  isAnyArrayBuffer: (value) =>
+    value instanceof ArrayBuffer || tagOf(value) === "SharedArrayBuffer",
   isArrayBufferView: (value) => ArrayBuffer.isView(value),
   isDataView: (value) => value instanceof DataView,
-  isTypedArray: (value) => ArrayBuffer.isView(value) && !(value instanceof DataView),
+  isTypedArray: (value) =>
+    ArrayBuffer.isView(value) && !(value instanceof DataView),
   isBoxedPrimitive: isBoxed,
   isProxy: () => false,
   isExternal: () => false,
   isKeyObject: () => false,
   isCryptoKey: () => false,
-  ...Object.fromEntries(TYPED_ARRAYS.map((Type) => [`is${Type.name}`, (value) => value instanceof Type])),
-  ...Object.fromEntries(BOXED_TAGS.map((tag) => [`is${tag}Object`, (value) => isBoxed(value) && tagOf(value) === tag])),
+  ...Object.fromEntries(
+    TYPED_ARRAYS.map((Type) => [
+      `is${Type.name}`,
+      (value) => value instanceof Type,
+    ]),
+  ),
+  ...Object.fromEntries(
+    BOXED_TAGS.map((tag) => [
+      `is${tag}Object`,
+      (value) => isBoxed(value) && tagOf(value) === tag,
+    ]),
+  ),
 };
 
 /// Node's own ANSI matcher, verbatim: a looser regex eats printable text out of an execa message.
-const VT_CONTROL = /[\u001B\u009B][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g;
+const VT_CONTROL =
+  /[\u001B\u009B][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g;
 
 const sectionEnabled = (section) =>
   String(process.env.NODE_DEBUG || "")
     .split(/[\s,]+/)
     .filter(Boolean)
     .some((token) =>
-      new RegExp(`^${token.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "i").test(section),
+      new RegExp(
+        `^${token.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
+        "i",
+      ).test(section),
     );
 
 /// execa and undici both call this at module scope, so an absent `debuglog` takes the bundle down
@@ -1457,7 +1954,10 @@ const sectionEnabled = (section) =>
 function debuglog(section, onLogger) {
   const enabled = sectionEnabled(section);
   const logger = enabled
-    ? (...args) => process.stderr.write(`${String(section).toUpperCase()} ${process.pid}: ${format(...args)}\n`)
+    ? (...args) =>
+        process.stderr.write(
+          `${String(section).toUpperCase()} ${process.pid}: ${format(...args)}\n`,
+        )
     : () => {};
   logger.enabled = enabled;
   onLogger?.(logger);
@@ -1513,7 +2013,9 @@ util.inspect.custom = Symbol.for("nodejs.util.inspect.custom");
 const querystring = {
   parse(text) {
     const out = {};
-    for (const [key, value] of new URLSearchParams(String(text || "").replace(/^[?]/, ""))) {
+    for (const [key, value] of new URLSearchParams(
+      String(text || "").replace(/^[?]/, ""),
+    )) {
       if (out[key] === undefined) out[key] = value;
       else if (Array.isArray(out[key])) out[key].push(value);
       else out[key] = [out[key], value];
@@ -1524,7 +2026,8 @@ const querystring = {
     const params = new URLSearchParams();
     for (const key of Object.keys(object || {})) {
       const value = object[key];
-      if (Array.isArray(value)) for (const item of value) params.append(key, item);
+      if (Array.isArray(value))
+        for (const item of value) params.append(key, item);
       else params.append(key, value);
     }
     return params.toString();
@@ -1535,13 +2038,24 @@ const querystring = {
 
 /// Node's legacy `url.format`, which also takes the parts object http-cookie-agent builds per request.
 function formatURL(value) {
-  if (typeof value !== "object" || value === null || value instanceof URL) return String(value);
+  if (typeof value !== "object" || value === null || value instanceof URL)
+    return String(value);
   const protocol = value.protocol ? value.protocol.replace(/:?$/, ":") : "";
-  const slashes = value.slashes || /^(https?|ftp|gopher|file|wss?):$/.test(protocol) ? "//" : "";
+  const slashes =
+    value.slashes || /^(https?|ftp|gopher|file|wss?):$/.test(protocol)
+      ? "//"
+      : "";
   const auth = value.auth ? `${value.auth}@` : "";
-  const host = value.host ?? (value.hostname ? value.hostname + (value.port ? `:${value.port}` : "") : "");
+  const host =
+    value.host ??
+    (value.hostname
+      ? value.hostname + (value.port ? `:${value.port}` : "")
+      : "");
   const pathname = (value.pathname ?? "").replace(/[?#]/g, encodeURIComponent);
-  const query = value.query && typeof value.query === "object" ? querystring.stringify(value.query) : "";
+  const query =
+    value.query && typeof value.query === "object"
+      ? querystring.stringify(value.query)
+      : "";
   const search = value.search ?? (query ? `?${query}` : "");
   return `${protocol}${slashes}${auth}${host}${pathname}${search}${value.hash ?? ""}`;
 }
@@ -1551,10 +2065,15 @@ function assert(value, message) {
 }
 assert.ok = assert;
 assert.equal = (a, b, message) => assert(a == b, message || `${a} != ${b}`);
-assert.strictEqual = (a, b, message) => assert(a === b, message || `${a} !== ${b}`);
-assert.notStrictEqual = (a, b, message) => assert(a !== b, message || `${a} === ${b}`);
+assert.strictEqual = (a, b, message) =>
+  assert(a === b, message || `${a} !== ${b}`);
+assert.notStrictEqual = (a, b, message) =>
+  assert(a !== b, message || `${a} === ${b}`);
 assert.deepStrictEqual = (a, b, message) =>
-  assert(JSON.stringify(a) === JSON.stringify(b), message || "not deeply equal");
+  assert(
+    JSON.stringify(a) === JSON.stringify(b),
+    message || "not deeply equal",
+  );
 assert.fail = (message) => assert(false, message);
 assert.throws = (fn, message) => {
   try {
@@ -1584,9 +2103,12 @@ class StringDecoder {
 /// so the member has to be a real constructor — and unknown members must exist too, hence the Proxy.
 function unsupportedModule(name, extras = {}) {
   const cache = new Map();
-  const lazy = new Set((UNSUPPORTED_EXPORTS[name] ?? []).filter((each) => !(each in extras)));
+  const lazy = new Set(
+    (UNSUPPORTED_EXPORTS[name] ?? []).filter((each) => !(each in extras)),
+  );
   const manufacture = (member) => {
-    if (!cache.has(member)) cache.set(member, makeUnsupported(`${name}.${member}`));
+    if (!cache.has(member))
+      cache.set(member, makeUnsupported(`${name}.${member}`));
     return cache.get(member);
   };
   return new Proxy(extras, {
@@ -1595,7 +2117,8 @@ function unsupportedModule(name, extras = {}) {
       // Interop and probing keys must stay absent: a truthy `__esModule` makes esbuild's `__toESM`
       // skip the default-wrapping it would otherwise apply, and a truthy `then` makes the module
       // look like a thenable to `await`.
-      if (typeof member !== "string" || RESERVED_MEMBERS.has(member)) return undefined;
+      if (typeof member !== "string" || RESERVED_MEMBERS.has(member))
+        return undefined;
       return manufacture(member);
     },
     // esbuild's `__toESM` snapshots own keys and never reads through `get`.
@@ -1603,12 +2126,30 @@ function unsupportedModule(name, extras = {}) {
     getOwnPropertyDescriptor(target, member) {
       const own = Reflect.getOwnPropertyDescriptor(target, member);
       if (own || !lazy.has(member)) return own;
-      return { value: manufacture(member), writable: true, enumerable: true, configurable: true };
+      return {
+        value: manufacture(member),
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      };
     },
   });
 }
 
-const RESERVED_MEMBERS = new Set(["__esModule", "default", "then", "catch", "prototype", "constructor", "toJSON", "inspect", "valueOf", "toString", "length", "name"]);
+const RESERVED_MEMBERS = new Set([
+  "__esModule",
+  "default",
+  "then",
+  "catch",
+  "prototype",
+  "constructor",
+  "toJSON",
+  "inspect",
+  "valueOf",
+  "toString",
+  "length",
+  "name",
+]);
 
 function makeUnsupported(label) {
   const reason = `${label} is not supported in Tinycast extensions (no Node runtime). See docs/extensions.md.`;
@@ -1628,8 +2169,10 @@ function makeUnsupported(label) {
 const httpLike = (name) =>
   unsupportedModule(name, {
     // The scheme rides with the module: `ws` and axios both pass an options bag with no protocol.
-    request: (input, options, callback) => httpRequest(input, options, callback, `${name}:`),
-    get: (input, options, callback) => httpGet(input, options, callback, `${name}:`),
+    request: (input, options, callback) =>
+      httpRequest(input, options, callback, `${name}:`),
+    get: (input, options, callback) =>
+      httpGet(input, options, callback, `${name}:`),
     validateHeaderName,
     validateHeaderValue,
     IncomingMessage,
@@ -1644,7 +2187,10 @@ const httpLike = (name) =>
 function es5Constructible(Class) {
   return new Proxy(Class, {
     apply: (target, self, args) =>
-      void Object.defineProperties(self, Object.getOwnPropertyDescriptors(new target(...args))),
+      void Object.defineProperties(
+        self,
+        Object.getOwnPropertyDescriptors(new target(...args)),
+      ),
   });
 }
 
@@ -1664,7 +2210,10 @@ const streamModule = unsupportedModule(
     getDefaultHighWaterMark: (objectMode) => (objectMode ? 16 : 16 * 1024),
     pipeline,
     finished,
-    promises: { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },
+    promises: {
+      pipeline: (...stages) => pipelinePromise(stages),
+      finished: finishedPromise,
+    },
   }),
 );
 
@@ -1757,7 +2306,8 @@ const diagnosticsChannel = unsupportedModule("diagnostics_channel", {
   channel,
   hasSubscribers: (name) => channels.get(name)?.hasSubscribers ?? false,
   subscribe: (name, onMessage) => channel(name).subscribe(onMessage),
-  unsubscribe: (name, onMessage) => channels.get(name)?.unsubscribe(onMessage) ?? false,
+  unsubscribe: (name, onMessage) =>
+    channels.get(name)?.unsubscribe(onMessage) ?? false,
 });
 
 // ─── Registry ───────────────────────────────────────────────────────
@@ -1779,9 +2329,30 @@ export const nodeModules = {
   assert,
   string_decoder: { StringDecoder },
   // node-fetch spreads a parsed URL into its request options and reads the legacy `path` off it.
-  url: { URL, URLSearchParams, fileURLToPath, pathToFileURL, parse: (text) => Object.assign(new URL(text), { path: new URL(text).pathname + new URL(text).search }), format: formatURL, resolve: (from, to) => new URL(to, from).href },
-  timers: { setTimeout, clearTimeout, setInterval, clearInterval, setImmediate, clearImmediate },
-  "timers/promises": { setTimeout: (ms, value) => new Promise((resolve) => setTimeout(() => resolve(value), ms)) },
+  url: {
+    URL,
+    URLSearchParams,
+    fileURLToPath,
+    pathToFileURL,
+    parse: (text) =>
+      Object.assign(new URL(text), {
+        path: new URL(text).pathname + new URL(text).search,
+      }),
+    format: formatURL,
+    resolve: (from, to) => new URL(to, from).href,
+  },
+  timers: {
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+    setImmediate,
+    clearImmediate,
+  },
+  "timers/promises": {
+    setTimeout: (ms, value) =>
+      new Promise((resolve) => setTimeout(() => resolve(value), ms)),
+  },
   perf_hooks: { performance: globalThis.performance },
   http: httpLike("http"),
   https: httpLike("https"),
@@ -1791,7 +2362,10 @@ export const nodeModules = {
   dns: unsupportedModule("dns"),
   stream: streamModule,
   "stream/web": webStreamModule,
-  "stream/promises": { pipeline: (...stages) => pipelinePromise(stages), finished: finishedPromise },
+  "stream/promises": {
+    pipeline: (...stages) => pipelinePromise(stages),
+    finished: finishedPromise,
+  },
   // No-ops rather than refusals: undici's `markAsUncloneable || (() => {})` never falls back.
   worker_threads: unsupportedModule("worker_threads", {
     isMainThread: true,
@@ -1812,16 +2386,33 @@ export const nodeModules = {
 };
 
 function requireStub(name) {
-  throw new Error(`createRequire is not supported in Tinycast extensions (tried to load "${name}").`);
+  throw new Error(
+    `createRequire is not supported in Tinycast extensions (tried to load "${name}").`,
+  );
 }
 
 // Every remaining Node builtin resolves to a refuse-on-use stub. Bundles reference the whole
 // long tail (http2, domain, repl, …) from dependencies that only touch them on paths an
 // extension never reaches, so a require-time throw would fail extensions that actually work.
 const REMAINING_BUILTINS = [
-  "assert/strict", "console", "dns/promises", "domain", "http2",
-  "inspector/promises", "path/posix", "path/win32", "readline/promises", "repl",
-  "stream/consumers", "sys", "trace_events", "util/types", "wasi", "sea", "sqlite", "test",
+  "assert/strict",
+  "console",
+  "dns/promises",
+  "domain",
+  "http2",
+  "inspector/promises",
+  "path/posix",
+  "path/win32",
+  "readline/promises",
+  "repl",
+  "stream/consumers",
+  "sys",
+  "trace_events",
+  "util/types",
+  "wasi",
+  "sea",
+  "sqlite",
+  "test",
   "test/reporters",
 ];
 for (const name of REMAINING_BUILTINS) {

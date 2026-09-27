@@ -157,8 +157,12 @@ struct ExtensionListView: View {
             let detail = screen.items[selection].node.node("detail")
         {
             ExtensionDetailBody(
-                markdown: detail.string("markdown"), metadata: detail.node("metadata"),
-                isLoading: detail.bool("isLoading") ?? false, assetsPath: assetsPath,
+                markdown: detail.string("markdown"),
+                html: detail.string("html"),
+                css: detail.string("css"),
+                metadata: detail.node("metadata"),
+                isLoading: detail.bool("isLoading") ?? false,
+                assetsPath: assetsPath,
                 stacksMetadata: true)
         } else {
             Color.clear

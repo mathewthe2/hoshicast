@@ -40,6 +40,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     private let commandMetadata = ExtensionCommandMetadataStore(
         fileURL: ExtensionCatalog.commandMetadataFile())
     @ObservationIgnored private let runtime: ExtensionRuntime
+    @ObservationIgnored private var retainedRuntimeExtension: String?
     @ObservationIgnored private let bridge: ExtensionHostBridge
     @ObservationIgnored private let oauthSession = ExtensionOAuthSession()
     @ObservationIgnored private weak var appIndex: AppIndex?
@@ -150,6 +151,19 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             let command = owner.command(named: reference.commandName)
         else { return nil }
         return entry(for: command, in: owner)
+    }
+    
+    private func keepsRuntimeInMemory(
+        for owner: InstalledExtension
+    ) -> Bool {
+        let schemas = owner.manifest.preferences
+
+        let preferences = storage.resolvedPreferences(
+            extension: owner.manifest.name,
+            schemas: schemas
+        )
+
+        return preferences["keepInMemory"]?.boolValue ?? false
     }
 
     private func publishLauncherEntries() {
@@ -418,14 +432,33 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func stop() async {
         oauthSession.cancel()
+
         guard let sessionID else {
             resetSessionState()
             return
         }
+
+        let extensionName = running?.extensionName
+
         self.sessionID = nil
+
         await runtime.stop(session: sessionID)
-        // Discard the context outright, so nothing left behind reaches the next run.
-        runtime.shutdown()
+
+        if let extensionName,
+           let owner = extensionNamed(extensionName),
+           keepsRuntimeInMemory(for: owner) {
+            // Keep the JSContext alive.
+            //
+            // ExtensionRuntime.stop() stops the current command but does NOT
+            // destroy the JSContext. Therefore Hoshiray's JS global dictionary
+            // remains alive here.
+            retainedRuntimeExtension = extensionName
+        } else {
+            // Normal behavior: completely destroy the JS runtime.
+            runtime.shutdown()
+            retainedRuntimeExtension = nil
+        }
+
         storage.flush()
         resetSessionState()
     }

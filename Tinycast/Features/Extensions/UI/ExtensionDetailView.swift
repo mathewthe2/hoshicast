@@ -4,6 +4,8 @@ import SwiftUI
 struct ExtensionDetailBody: View {
     @Environment(\.metrics) private var metrics
     let markdown: String?
+    let html: String?
+    let css: String?
     let metadata: RenderNode?
     let isLoading: Bool
     let assetsPath: String?
@@ -14,13 +16,43 @@ struct ExtensionDetailBody: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            markdownPane(trailing: stacksMetadata ? metadata : nil)
+            if let html, !html.isEmpty {
+                htmlPane
+            } else {
+                markdownPane(
+                    trailing: stacksMetadata ? metadata : nil
+                )
+            }
+
             if !stacksMetadata, let metadata {
-                Rectangle().fill(Theme.Colors.separator).frame(width: 1)
+                Rectangle()
+                    .fill(Theme.Colors.separator)
+                    .frame(width: 1)
+
                 metadataPane(metadata)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity
+        )
+    }
+    
+    @ViewBuilder
+    private var htmlPane: some View {
+        if let html, !html.isEmpty {
+            ExtensionHTMLView(
+                html: html,
+                css: css,
+                baseURL: assetsPath.map {
+                    URL(fileURLWithPath: $0)
+                }
+            )
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
+        }
     }
 
     private func markdownPane(trailing metadata: RenderNode?) -> some View {
